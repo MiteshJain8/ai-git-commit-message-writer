@@ -3,7 +3,7 @@ import sys
 import os
 import subprocess
 import argparse
-import google.generativeai as generativeai
+import importlib
 from dotenv import load_dotenv
 load_dotenv()  # loads .env into os.environ
 
@@ -169,6 +169,15 @@ def extract_text_from_response(resp) -> str:
 
 def run_gemini(prompt: str, api_key: str):
     """Call Gemini and return the model response object (may raise)."""
+    # Dynamically import the google.generativeai package to avoid static import errors
+    try:
+        generativeai = importlib.import_module("google.generativeai")
+    except ModuleNotFoundError as e:
+        raise RuntimeError(
+            "google.generativeai package not found; install it (for example: "
+            "`pip install google-generative-ai`) or ensure it's available in the environment."
+        ) from e
+
     # Configure client if possible
     try:
         generativeai.configure(api_key=api_key)
