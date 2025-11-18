@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!C:/Python312/python.exe
 import sys
 import os
 import subprocess
 import argparse
 import importlib
+import time
 try:
     from dotenv import load_dotenv
     load_dotenv()  # loads .env into os.environ if file exists
@@ -204,10 +205,34 @@ def run_hook(commit_msg_filepath: str, commit_source: str = None, dry_run: bool 
     except ValueError as e:
         raise
 
-    try:
-        response = run_gemini(prompt, api_key)
-    except Exception as e:
-        raise RuntimeError(f"Gemini API call failed: {e}")
+    # Call Gemini with retries for transient errors (503/unavailable/rate limits)
+    max_attempts = 3
+    response = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = run_gemini(prompt, api_key)
+            break
+        except Exception as e:
+            msg = str(e) or ""
+            is_transient = False
+            # simple heuristic for transient errors from the GenAI API
+            if any(token in msg for token in ("503", "UNAVAILABLE", "overloaded", "rate limit", "rate_limited", "timeout", "timed out")):
+                is_transient = True
+
+            # If the SDK import failed or it's a non-transient error, surface it immediately
+            if not is_transient:
+                raise RuntimeError(f"Gemini API call failed: {e}")
+
+            # If transient and we have attempts left, wait and retry
+            if attempt < max_attempts:
+                wait = 2 ** (attempt - 1)
+                print(f"WARN: transient Gemini error (attempt {attempt}/{max_attempts}): {e}. Retrying in {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+                continue
+
+            # Exhausted retries — warn and skip AI generation (do not block commits)
+            print(f"WARN: Gemini unavailable after {max_attempts} attempts: {e}. Skipping AI commit message generation.", file=sys.stderr)
+            return None
 
     raw = extract_text_from_response(response)
     cleaned = sanitize_generated_text(raw)
