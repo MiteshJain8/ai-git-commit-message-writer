@@ -4,8 +4,11 @@ import os
 import subprocess
 import argparse
 import importlib
-from dotenv import load_dotenv
-load_dotenv()  # loads .env into os.environ
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # loads .env into os.environ if file exists
+except ImportError:
+    pass  # dotenv not required if using system environment variables
 
 """
 Prepare-commit-msg Git hook that asks Google Gemini to generate a Conventional Commits
