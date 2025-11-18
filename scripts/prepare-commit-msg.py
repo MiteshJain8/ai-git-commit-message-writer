@@ -23,7 +23,7 @@ Behavior:
 """
 
 MAX_SUBJECT_LENGTH = 50
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.5-flash"
 
 
 def read_api_key():
@@ -169,28 +169,16 @@ def extract_text_from_response(resp) -> str:
 
 def run_gemini(prompt: str, api_key: str):
     """Call Gemini and return the model response object (may raise)."""
-    # Dynamically import the google.generativeai package to avoid static import errors
     try:
-        generativeai = importlib.import_module("google.generativeai")
-    except ModuleNotFoundError as e:
+        from google import genai
+    except ImportError:
         raise RuntimeError(
-            "google.generativeai package not found; install it (for example: "
-            "`pip install google-generative-ai`) or ensure it's available in the environment."
-        ) from e
-
-    # Configure client if possible
-    try:
-        generativeai.configure(api_key=api_key)
-    except Exception as e:
-        # Non-fatal - some SDKs don't require configure; warn and continue
-        print(f"WARN: could not call configure(): {e}", file=sys.stderr)
-
-    return generativeai.generate_content(
-        model=MODEL_NAME,
-        prompt=prompt,
-        temperature=0.2,
-        max_output_tokens=512
-    )
+            "Could not import google.genai. "
+            "Install it with: pip install google-genai"
+        )
+    
+    with genai.Client(api_key=api_key) as client:
+        return client.models.generate_content(model=MODEL_NAME, contents=prompt)
 
 
 def run_hook(commit_msg_filepath: str, commit_source: str = None, dry_run: bool = False):
