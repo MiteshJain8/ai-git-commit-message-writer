@@ -63,7 +63,7 @@ def get_staged_diff() -> str:
             "git",
             "diff",
             "--staged"
-        ], capture_output=True, text=True, check=False)
+        ], capture_output=True, text=True, check=False, encoding='utf-8', errors='replace')
     except Exception as e:
         # Return empty string on failure; caller will treat as no changes
         print(f"WARN: running git diff failed: {e}", file=sys.stderr)
