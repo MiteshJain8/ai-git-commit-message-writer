@@ -1,4 +1,4 @@
-#!C:/Python312/python.exe
+#!/c/Python312/python
 import sys
 import os
 import subprocess
